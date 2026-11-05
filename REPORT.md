@@ -20,9 +20,11 @@ I did not modify the ELIZA implementation or the WebSocket server.
 
 ## Technical decisions
 
-At first, I tried `Hello`, but I found that it could produce different responses because it does not match any defined keyword. I rejected it because the test could fail randomly depending on the server's response.
+At first, I tried Hello, but it did not match any defined keyword, so ELIZA selected a random response from the NOT_FOUND list. I rejected it because the test could fail randomly.
 
-I chose `always` because, after reviewing `Eliza.kt`, I found that this keyword has only one possible response: `Can you think of a specific example?`. This makes the test deterministic, even though ELIZA uses random selection internally.
+After reviewing Eliza.kt, I chose always because its response list contains only one answer: Can you think of a specific example?. Other keywords, such as because, sorry, or maybe, would also work because they have only one possible response. However, keywords like yes or family have several possible answers, making them unsuitable for this test.
+
+I also considered how ELIZA searches for keywords. It uses firstOrNull to select the first matching keyword according to the iteration order of the keyword collection, not necessarily the first word in the user's sentence. For this reason, I used always alone, without other keywords that could affect the result. This guarantees that the same keyword and response are selected every time.
 
 I kept `val size = list.size` to read the number of messages once. WebSocket messages arrive asynchronously, so the list can change while the test is running.
 
