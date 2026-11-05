@@ -8,7 +8,7 @@ import jakarta.websocket.ContainerProvider
 import jakarta.websocket.OnMessage
 import jakarta.websocket.Session
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
@@ -36,7 +36,6 @@ class ElizaServerTest {
         assertEquals("The doctor is in.", list[0])
     }
 
-    @Disabled // Remove this line when you implement onChat
     @Test
     fun onChat() {
         logger.info { "Test thread" }
@@ -47,10 +46,16 @@ class ElizaServerTest {
         client.connect("ws://localhost:$port/eliza")
         latch.await()
         val size = list.size
-        // 1. EXPLAIN WHY size = list.size IS NECESSARY
-        // 2. REPLACE BY assertXXX expression that checks an interval; assertEquals must not be used;
-        // 3. EXPLAIN WHY assertEquals CANNOT BE USED AND WHY WE SHOULD CHECK THE INTERVAL
-        // 4. COMPLETE assertEquals(XXX, list[XXX])
+        // 1. Capture the list size once because messages arrive asynchronously
+        // and the list may change while the test is running.
+
+        // 2-3. The latch waits for four messages, but the fifth message ("---")
+        // may already have arrived. Therefore, the size can be 4 or 5.
+        // assertEquals would make the test timing-dependent.
+        assertTrue(size in 4..5)
+
+        // 4. Verify the deterministic response to "always".
+        assertEquals("Can you think of a specific example?", list[3])
     }
 }
 
@@ -73,7 +78,6 @@ class ComplexClient(
     private val latch: CountDownLatch,
 ) {
     @OnMessage
-    @Suppress("UNUSED_PARAMETER") // Remove this line when you implement onMessage
     fun onMessage(
         message: String,
         session: Session,
@@ -81,9 +85,9 @@ class ComplexClient(
         logger.info { "Client received: $message" }
         list.add(message)
         latch.countDown()
-        // 5. COMPLETE if (expression) {
-        // 6. COMPLETE   sentence
-        // }
+        if (message == "---" && list.size == 3) {
+            session.basicRemote.sendText("always")
+        }
     }
 }
 
